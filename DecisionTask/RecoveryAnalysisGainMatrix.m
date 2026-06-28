@@ -1,16 +1,22 @@
-% clear all
-close all
+clear all
+%close all
 clc
 
 rng('shuffle');
 
 % TuningFn on remote computer
 
-addpath('/Users/avinashranjan/Desktop/UT Austin/Goris lab/ModelV1Uncertainty/EstimationTask/Scripts/')
+addpath('C:\Users\avinash1598\Desktop\ModelV1Uncertainty\DecisionTask\Scripts\')
+%addpath('/Users/avinashranjan/Desktop/UT Austin/Goris lab/ModelV1Uncertainty/EstimationTask/Scripts/')
 % addpath('/Volumes/Desktop/UT Austin/Goris lab/ModelV1Uncertainty/DecisionTask')
 
-tuningFnData = load('tuningFnDataGainMatrix.mat');
-% tuningFnData = load('tuningFnData.mat');
+%tuningFnData = load('tuningFnDataGainMatrix.mat'); % Decode using gains of individual neurons
+%tuningFnData = load('tuningFnDataDecodeAvgGain.mat'); % Decode using average gains of all the neurons
+tuningFnData = load('tuningFnDataCovSigmaG_v2.mat'); % Decode using average gains of all the neurons
+
+% How is average decoder compared to the original decoder (individual gains
+% for each neuron)?
+% Which decoder (avg or full) better explain the actual behavioral results from monkey? 
 
 % ----------------------------------
 % Params
@@ -22,24 +28,25 @@ timeStep     = 0.001; % 0.001s (1ms) - Step size of time bins used for binning s
 % Stimulus parameters (angles in radians)
 warning("don't change these values")
 contrasts               = [0.01 0.05]; 
-spreads                 = [3 30]; 
-uniqStimOris            = 88:0.5:92; %80:2:100;
+spreads                 = deg2rad([3 30]); 
+uniqStimOris            = linspace(90-10, 90+10, 21); %80:0.5:100;
 uniqStimOris            = deg2rad(uniqStimOris');
 stimParam.numStim       = numel(uniqStimOris);                                % Number of unique stimuli
 stimParam.countPerStim  = 60; % 100 
 ntrials                 = stimParam.numStim * stimParam.countPerStim * numel(contrasts) * numel(spreads);  % Total number of trials
 
+trlMatrix               = tuningFnData.data.trialMatrix;
 %%
 timeBins                  = 0:timeStep:stimDuration; 
 stimRespProfile           = 1 + zeros(1, numel(timeBins));
-gainVector                = gainVector'; %nNeurons x nTrials 1 + zeros(nNeurons, ntrials); % constant gain - NO gain modulation
+%gainVector                = gainVector'; %nNeurons x nTrials 1 + zeros(nNeurons, ntrials); % constant gain - NO gain modulation
 
 tuningParams              = tuningFnData.data.tuningParams;
 neuronsPrefOrientation    = tuningFnData.data.neuronsPrefOrientation;
 
 tuningFnOriSpace  = linspace(0, pi, 361);
 tuningFnContrasts = linspace(1e-4, 0.15, 49);
-tuningFnSpreads   = linspace(1, 90, 50);
+tuningFnSpreads   = deg2rad(linspace(1, 90, 50));
 
 % Update tuning Fns
 tuningFns    = tuningFnData.data.tuningFns;
@@ -188,7 +195,7 @@ for i = 1:4
     
     minV = min([ll_Poiss ll_MPoiss]);
     rangeV = max([ll_Poiss ll_MPoiss]) - min([ll_Poiss ll_MPoiss]);
-    delta = (1000 - rangeV);
+    delta = (2000 - rangeV);
     
     xlim([minV - 10 - delta / 2, minV + rangeV + delta / 2])
     %xlim(minV + [-900 10])
@@ -331,7 +338,7 @@ for i = 1:4
     
     minV = min([ll_Poiss ll_MPoiss]);
     rangeV = max([ll_Poiss ll_MPoiss]) - min([ll_Poiss ll_MPoiss]);
-    delta = (1000 - rangeV);
+    delta = (2000 - rangeV);
     
     xlim([minV - 10 - delta / 2, minV + rangeV + delta / 2])
     %xlim(minV + [-900 10])
@@ -429,13 +436,15 @@ idx = 1;
                 / numel(fltDecisions_Poiss((fltConf_Poiss == 0))); % Prop CCW (or is it CW? doesn't matter though)
             
             % Count of HC and LC at each orientation
-            countFn_HC_GTPoiss(idx, oriIdx) = sum( (fltDecisions_Poiss == 1) & (fltConf_Poiss == 1)  );
-            countFn_LC_GTPoiss(idx, oriIdx) = sum( (fltDecisions_Poiss == 1) & (fltConf_Poiss == 0)  );
+            %countFn_HC_GTPoiss(idx, oriIdx) = sum( (fltDecisions_Poiss == 1) & (fltConf_Poiss == 1)  );
+            %countFn_LC_GTPoiss(idx, oriIdx) = sum( (fltDecisions_Poiss == 1) & (fltConf_Poiss == 0)  );
+            countFn_HC_GTPoiss(idx, oriIdx) = sum( (fltConf_Poiss == 1)  );
+            countFn_LC_GTPoiss(idx, oriIdx) = sum( (fltConf_Poiss == 0)  );
             
             % Proportion HC and LC at each stim
             confFn_HC_GTPoiss(idx, oriIdx) = numel(fltDecisions_Poiss((fltConf_Poiss == 1))) / numel(fltDecisions_Poiss);
             confFn_LC_GTPoiss(idx, oriIdx) = numel(fltDecisions_Poiss((fltConf_Poiss == 0))) / numel(fltDecisions_Poiss);
-
+            
             % Modulated Poisson
             fltDecisions_MPoiss = decisionMPoissDec(fltIdx);
             fltConf_MPoiss      = confMPoiss(fltIdx);
@@ -445,13 +454,15 @@ idx = 1;
             psycFn_LC_GTMPoiss(idx, oriIdx) = sum( (fltDecisions_MPoiss == 1) & (fltConf_MPoiss == 0) ) ... % & (fltConf_MPoiss == 0)
                 / numel(fltDecisions_MPoiss(fltConf_MPoiss == 0)); % Prop CCW (or is it CW? doesn't matter though)
             
-            countFn_HC_GTMPoiss(idx, oriIdx) = sum( (fltDecisions_MPoiss == 1) & (fltConf_MPoiss == 1)  );
-            countFn_LC_GTMPoiss(idx, oriIdx) = sum( (fltDecisions_MPoiss == 1) & (fltConf_MPoiss == 0)  );
+            %countFn_HC_GTMPoiss(idx, oriIdx) = sum( (fltDecisions_MPoiss == 1) & (fltConf_MPoiss == 1)  );
+            %countFn_LC_GTMPoiss(idx, oriIdx) = sum( (fltDecisions_MPoiss == 1) & (fltConf_MPoiss == 0)  );
+            countFn_HC_GTMPoiss(idx, oriIdx) = sum( (fltConf_MPoiss == 1)  );
+            countFn_LC_GTMPoiss(idx, oriIdx) = sum( (fltConf_MPoiss == 0)  );
             
             % Proportion HC and LC at each stim
             confFn_HC_GTMPoiss(idx, oriIdx) = numel(fltDecisions_MPoiss((fltConf_MPoiss == 1))) / numel(fltDecisions_MPoiss);
             confFn_LC_GTMPoiss(idx, oriIdx) = numel(fltDecisions_MPoiss((fltConf_MPoiss == 0))) / numel(fltDecisions_MPoiss);
-
+            
         end
         
 %         idx = idx + 1;

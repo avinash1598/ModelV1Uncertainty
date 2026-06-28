@@ -57,6 +57,8 @@ function [contrastMLE, spreadMLE, thetaMLE, pdfData, MLEs, metrics] = decodeModu
 %             log_pdf_p2 = n.*log(temp) - (n + 1./sigma_g.^2).*log(1 + temp);
 %             log_pdf = sum(log_pdf_p1 + log_pdf_p2, 1, 'omitnan'); 
             
+            %keyboard
+
             temp = sigma_g2 .* stimDuration .* f_theta; % + eps (eps is problamatic)
 
             log_pdf_p1 = gammaln(n + 1./sigma_g2) ...
